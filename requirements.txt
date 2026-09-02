@@ -50,7 +50,6 @@ tensorboard
 # descript-audio-codec --no-deps
 # descript-audiotools>=0.7.2 --no-deps
 
-bitsandbytes
 huggingface-hub
 
 # einx is NOT required — it is not used anywhere in the bundled fish_speech source.

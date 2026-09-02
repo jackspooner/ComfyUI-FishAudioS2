@@ -23,7 +23,6 @@ dependencies = [
     "natsort",
     "loralib",
     "hydra-core",
-    "bitsandbytes",
     "huggingface-hub",
     # Transitive runtime deps of descript-audio-codec / descript-audiotools.
     # Listed here for ComfyUI Manager awareness. Auto-installed by __init__.py.

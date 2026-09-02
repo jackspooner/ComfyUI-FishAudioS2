@@ -1,10 +1,7 @@
 """ComfyUI custom nodes for Fish Audio S2-Pro TTS.
 
-Provides four nodes:
-  - FishS2TTS             — text → speech, 80+ languages, inline emotion tags
-  - FishS2VoiceCloneTTS   — reference audio + text → cloned-voice speech
-  - FishS2MultiSpeakerTTS — multi-speaker conversation synthesis in one pass
-  - FishS2MultiSpeakerSplitTTS — multi-speaker with per-speaker audio outputs
+Provides six native modular nodes plus four deprecated workflow-compatible
+adapters for the original TTS, voice-clone, and multi-speaker nodes.
 
 Required pip packages are auto-installed on startup.
 Model weights are auto-downloaded from HuggingFace on first inference.
@@ -182,7 +179,6 @@ _REQUIRED = [
     # used by fish-speech's training dataset tooling which is never called here.
     ("audiotools",      "descript-audiotools>=0.7.2 --no-deps"),
     ("dac",             "descript-audio-codec --no-deps"),
-    ("bitsandbytes",    "bitsandbytes"),
 ]
 
 
@@ -313,7 +309,7 @@ def _ensure_dependencies() -> bool:
 
     # If any package was auto-installed, ensure torch is still a CUDA build.
     # pip may silently install a CPU torch as a transitive dependency of packages
-    # like transformers or bitsandbytes — especially in embedded Python where the
+    # like transformers — especially in embedded Python where the
     # CUDA torch was not installed via pip and has no pip metadata record.
     if any_installed:
         _restore_torch()
@@ -337,21 +333,37 @@ def _ensure_dependencies() -> bool:
 NODE_CLASS_MAPPINGS: Dict[str, Any] = {}
 NODE_DISPLAY_NAME_MAPPINGS: Dict[str, str] = {}
 
-if _ensure_fish_source() and _ensure_dependencies():
+if __package__ and _ensure_fish_source() and _ensure_dependencies():
     try:
         from .nodes.loader import _register_folder
         _register_folder()
 
-        from .nodes.tts_node import FishS2TTS
-        from .nodes.voice_clone_node import FishS2VoiceCloneTTS
-        from .nodes.multi_speaker_node import FishS2MultiSpeakerTTS
-        from .nodes.multi_speaker_split_node import FishS2MultiSpeakerSplitTTS
+        from .nodes.legacy_adapters import (
+            FishS2MultiSpeakerSplitTTS,
+            FishS2MultiSpeakerTTS,
+            FishS2TTS,
+            FishS2VoiceCloneTTS,
+        )
+        from .nodes.native_nodes import (
+            FishS2Conditioning,
+            FishS2DecodeAudio,
+            FishS2EncodeReference,
+            FishS2GenerateCodes,
+            FishS2ModelLoader,
+            FishS2Synthesize,
+        )
 
         NODE_CLASS_MAPPINGS = {
             "FishS2TTS": FishS2TTS,
             "FishS2VoiceCloneTTS": FishS2VoiceCloneTTS,
             "FishS2MultiSpeakerTTS": FishS2MultiSpeakerTTS,
             "FishS2MultiSpeakerSplitTTS": FishS2MultiSpeakerSplitTTS,
+            "FishS2ModelLoader": FishS2ModelLoader,
+            "FishS2Conditioning": FishS2Conditioning,
+            "FishS2EncodeReference": FishS2EncodeReference,
+            "FishS2GenerateCodes": FishS2GenerateCodes,
+            "FishS2DecodeAudio": FishS2DecodeAudio,
+            "FishS2Synthesize": FishS2Synthesize,
         }
 
         NODE_DISPLAY_NAME_MAPPINGS = {
@@ -359,6 +371,12 @@ if _ensure_fish_source() and _ensure_dependencies():
             "FishS2VoiceCloneTTS": "Fish S2 Voice Clone TTS",
             "FishS2MultiSpeakerTTS": "Fish S2 Multi-Speaker TTS",
             "FishS2MultiSpeakerSplitTTS": "Fish S2 Multi-Speaker Split TTS",
+            "FishS2ModelLoader": "Fish S2 Model Loader",
+            "FishS2Conditioning": "Fish S2 Conditioning",
+            "FishS2EncodeReference": "Fish S2 Encode Reference",
+            "FishS2GenerateCodes": "Fish S2 Generate Codes",
+            "FishS2DecodeAudio": "Fish S2 Decode Audio",
+            "FishS2Synthesize": "Fish S2 Synthesize",
         }
 
         logger.info(
@@ -368,7 +386,7 @@ if _ensure_fish_source() and _ensure_dependencies():
 
     except Exception as e:
         logger.error(f"Failed to register nodes: {e}", exc_info=True)
-else:
+elif __package__:
     logger.warning(
         "FishAudioS2 nodes not registered — "
         "fix dependency errors above and restart ComfyUI."

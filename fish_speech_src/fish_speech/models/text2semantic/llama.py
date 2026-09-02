@@ -515,18 +515,6 @@ class BaseTransformer(nn.Module):
             ),
             persistent=False,
         )
-        self.register_buffer(
-            "causal_mask",
-            torch.tril(
-                torch.ones(
-                    config.max_seq_len,
-                    config.max_seq_len,
-                    dtype=torch.bool,
-                )
-            ),
-            persistent=False,
-        )
-
         # For kv cache
         self.max_batch_size = -1
         self.max_seq_len = -1
@@ -588,7 +576,7 @@ class BaseTransformer(nn.Module):
 
         mask = None
         if key_padding_mask is not None:
-            causal = self.causal_mask[:seq_len, :seq_len]
+            causal = torch.ones((seq_len, seq_len), dtype=torch.bool, device=inp.device).tril()
             causal = rearrange(causal, "q k -> 1 1 q k")
 
             atten_mask = rearrange(key_padding_mask, "b s -> b 1 1 s")
@@ -668,7 +656,8 @@ class BaseTransformer(nn.Module):
         else:
             max_seq_len = self.max_seq_len
 
-        mask = self.causal_mask[None, None, input_pos, :max_seq_len]  # (B, N, Q, K)
+        key_pos = torch.arange(max_seq_len, device=x.device)
+        mask = key_pos[None, None, None, :] <= input_pos[None, None, :, None]
         freqs_cis = self.freqs_cis[input_pos]
 
         for layer in self.layers:
@@ -765,17 +754,12 @@ class BaseTransformer(nn.Module):
             # checkpoint, so no actual data is needed at init time.
             with torch.device("meta"):
                 model = model_cls(config)
-            # Materialize non-persistent buffers (freqs_cis, causal_mask,
-            # fast_freqs_cis) — these are tiny but must be real tensors for
+            # Materialize non-persistent rotary buffers. These must be real tensors for
             # forward pass. persistent=False means load_state_dict won't touch
             # them, so we recreate them on CPU here.
             if hasattr(model, "freqs_cis") and model.freqs_cis.is_meta:
                 model.freqs_cis = precompute_freqs_cis(
                     config.max_seq_len, config.head_dim, config.rope_base
-                )
-            if hasattr(model, "causal_mask") and model.causal_mask.is_meta:
-                model.causal_mask = torch.tril(
-                    torch.ones(config.max_seq_len, config.max_seq_len, dtype=torch.bool)
                 )
             if hasattr(model, "fast_freqs_cis") and model.fast_freqs_cis.is_meta:
                 model.fast_freqs_cis = precompute_freqs_cis(
@@ -915,7 +899,7 @@ class BaseTransformer(nn.Module):
                     f"Assigned FP8 weights in {time.perf_counter() - t_stage:.1f}s"
                 )
 
-                # Restore buffers (freqs_cis, causal_mask, etc.)
+                # Restore checkpoint-provided non-parameter buffers.
                 t_stage = time.perf_counter()
                 buf_sd = {n: p for n, p in model.named_buffers()}
                 for k, v in buf_weights.items():
@@ -1106,9 +1090,7 @@ class DualARTransformer(BaseTransformer):
 
         # Fast transformer
         fast_seq_len = self.config.num_codebooks
-        fast_mask = self.causal_mask[
-            None, None, :fast_seq_len, :fast_seq_len
-        ]  # (B, N, Q, K)
+        fast_mask = torch.ones((1, 1, fast_seq_len, fast_seq_len), dtype=torch.bool, device=x.device).tril()
         fast_freqs_cis = self.fast_freqs_cis[:fast_seq_len]
 
         # Extract corresponding parts with labels
@@ -1167,9 +1149,8 @@ class DualARTransformer(BaseTransformer):
         # Fast transformer
         x = x.view(x.shape[0], 1, -1)
 
-        fast_mask = self.causal_mask[
-            None, None, input_pos, : self.config.num_codebooks
-        ]  # (B, N, Q, K)
+        key_pos = torch.arange(self.config.num_codebooks, device=x.device)
+        fast_mask = key_pos[None, None, None, :] <= input_pos[None, None, :, None]
         fast_freqs_cis = self.fast_freqs_cis[input_pos]
 
         for layer in self.fast_layers:

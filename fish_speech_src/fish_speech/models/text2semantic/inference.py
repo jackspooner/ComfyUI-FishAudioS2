@@ -278,6 +278,7 @@ def decode_n_tokens(
     audio_masks: torch.Tensor,
     audio_parts: torch.Tensor,
     decode_one_token=decode_one_token_ar,
+    interruption_check: Optional[Callable[[], None]] = None,
 ):
     codebook_dim = model.config.num_codebooks + 1
     im_end_id = model.tokenizer.get_token_id(IM_END_TOKEN)
@@ -301,6 +302,8 @@ def decode_n_tokens(
     # Move sdpa_kernel outside the loop — SDPBackend.MATH is valid on CUDA/CPU/MPS.
     with sdpa_kernel(SDPBackend.MATH):
         for i in tqdm(range(num_new_tokens)):
+            if interruption_check is not None:
+                interruption_check()
             if _cancel_event is not None and _cancel_event.is_set():
                 logger.info("Generation cancelled by user — stopping token loop.")
                 break
@@ -351,6 +354,7 @@ def generate(
     audio_parts: torch.Tensor,
     decode_one_token=decode_one_token_ar,
     num_samples: int = 1,
+    interruption_check: Optional[Callable[[], None]] = None,
     **sampling_kwargs,
 ):
     """
@@ -424,6 +428,9 @@ def generate(
 
     prefill_decode = decode_one_token_ar
 
+    if interruption_check is not None:
+        interruption_check()
+
     first_token = prefill_decode(
         model,
         prompt.view(1, codebook_dim, -1),
@@ -452,6 +459,7 @@ def generate(
         audio_masks=audio_masks,
         audio_parts=audio_parts,
         decode_one_token=decode_one_token,
+        interruption_check=interruption_check,
     )
     seq = seq[:, : T + 1 + x.size(1)]
     seq[:, T + 1 :] = x
@@ -703,6 +711,7 @@ def generate_long(
     chunk_length: int = 512,
     prompt_text: Optional[Union[str, list[str]]] = None,
     prompt_tokens: Optional[Union[torch.Tensor, list[torch.Tensor]]] = None,
+    interruption_check: Optional[Callable[[], None]] = None,
 ):
     assert 0 < top_p <= 1, "top_p must be in (0, 1]"
     assert 0 < temperature < 2, "temperature must be in (0, 2)"
@@ -781,6 +790,8 @@ def generate_long(
         conversation = _deepcopy_share_tensors(base_conversation)
 
         for batch_idx, batch_text in enumerate(batches):
+            if interruption_check is not None:
+                interruption_check()
             logger.info(
                 f"--- Sample {sample_idx}, Batch {batch_idx} "
                 f"({len(batch_text.encode('utf-8'))} bytes) ---"
@@ -854,6 +865,7 @@ def generate_long(
                 temperature=temperature,
                 top_p=top_p,
                 top_k=top_k,
+                interruption_check=interruption_check,
             )
 
             if sample_idx == 0 and batch_idx == 0 and compile:
