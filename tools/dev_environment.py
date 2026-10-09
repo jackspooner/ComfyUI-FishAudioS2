@@ -36,9 +36,9 @@ def test_environment():
                 PYTHONNOUSERSITE="1", PYTHONDONTWRITEBYTECODE="1", HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1")
 
 
-def dependency_probe():
+def dependency_probe(full=False):
     # The bundled project's training dependencies are not the node runtime.
-    return """
+    code = """
 import importlib.metadata as metadata
 from pathlib import Path
 import tomllib
@@ -58,6 +58,13 @@ verify(Path('requirements-dev.lock.txt').read_text().splitlines())
 verify(Path('requirements.txt').read_text().splitlines())
 verify(tomllib.loads(Path('pyproject.toml').read_text())['project']['dependencies'])
 verify(Path(__import__('os').environ['COMFYUI_ROOT'], 'requirements.txt').read_text().splitlines())
+import importlib.util
+for name in ['torch', 'torchaudio', 'torchvision', 'pytest', 'transformers', 'click', 'dac', 'audiotools']:
+    module = importlib.util.find_spec(name)
+    assert module and module.origin and Path(module.origin).is_file(), f'Missing installed module: {name}; rerun setup'
+"""
+    if full:
+        code += """
 import torch, torchaudio, torchvision, pytest, transformers, click, dac, audiotools
 assert torch.version.cuda is None, 'CPU development wheels required'
 from comfy.cli_args import args
@@ -66,6 +73,7 @@ import comfy.model_management
 from fish_speech.models.text2semantic import llama, inference
 import nodes.native_runtime
 """
+    return code
 
 
 def main(action):
@@ -94,9 +102,9 @@ def main(action):
         main("environment-ready")
         run([str(PYTHON), "-m", "pip", "install", "--force-reinstall", "--no-deps", "--extra-index-url", "https://download.pytorch.org/whl/cpu", "-r", "requirements-dev.lock.txt"])
         main("ready")
-    elif action == "ready":
+    elif action in {"installed", "ready"}:
         main("environment-ready")
-        run([str(PYTHON), "-c", dependency_probe()], env=test_environment())
+        run([str(PYTHON), "-c", dependency_probe(full=action == "ready")], env=test_environment())
     else:
         raise SystemExit(f"Unknown development preparation action: {action}")
 

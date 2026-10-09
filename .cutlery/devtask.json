@@ -76,7 +76,7 @@
       "probe": [
         "python3",
         "tools/dev_environment.py",
-        "ready"
+        "installed"
       ],
       "environmentInputs": [
         "FISHS2_DEV_PYTHON",
