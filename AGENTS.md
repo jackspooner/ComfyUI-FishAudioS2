@@ -1,45 +1,13 @@
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
+# Repository development and operating ownership
 
-This project is indexed by GitNexus as **ComfyUI-FishAudioS2** (1803 symbols, 3091 relationships, 152 execution flows).
+Read the root README before development. This repository forks Saganaki22/ComfyUI-FishAudioS2 and bundles Fish Audio source; retain upstream attribution and licensing when changing documentation or behavior.
 
-> Index stale? Run `node .gitnexus/run.cjs analyze --index-only` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? Bootstrap with `npx`, `bunx`, or `pnpm dlx` — e.g. `bunx gitnexus@latest analyze` (npm 11 npx crash; #1939).
+Use Git CLI task worktrees from clean committed main. Prepare each fresh worktree with `python3 tools/setup_worktree.py`; no argument selects full, while `docs` retains native validation requirements. Install/configure Workspace2 DevTasks first. Set `FISHS2_DEV_PYTHON` to a standalone Python executable (3.13 verified) and `COMFYUI_ROOT` to a read-only native ComfyUI checkout. Never use, copy, install into or replace the serving environment. Setup owns only `.venv/dev-runtime/` and ignored `.cutlery/devtask/` receipts; it restores the committed CPU development lock and starts no services/models.
 
-## Always Do
+Required checks are `python3 tools/checks.py` and `python3 tools/checks.py syntax`. Run the complete unchanged native pytest suite with real ComfyUI imports and CPU fixture initialization. Do not weaken numeric assertions, replace native imports with fake modules, skip failing tests or claim CPU fixtures establish CUDA inference. Compatible Python differences are reported; unsupported tooling or dependency conflicts must fail with actionable diagnostics. Setup and model operation remain separate; do not invoke the plugin root auto-installer to prepare another checkout.
 
-- **MUST run impact analysis before editing.** Use `impact({target: "symbolName", direction: "upstream"})` (MCP) or `node .gitnexus/run.cjs impact "symbolName" --direction upstream --repo .` (CLI fallback); report callers, processes, and risk. Never substitute grep for graph analysis.
-- **MUST analyze graph changes before committing.** Use `detect_changes({scope: "all"})` (MCP) or `node .gitnexus/run.cjs detect-changes --scope all --repo .` (CLI fallback). `partial: true` or `truncated: true` is not a clean check — a zero means unseen, not unaffected; re-run it. For regression review: `detect_changes({scope: "compare", base_ref: "main"})` or `node .gitnexus/run.cjs detect-changes --scope compare --base-ref "main" --repo .`.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- **MUST treat `risk: UNKNOWN` as unresolved, not as low.** An empty caller set is not evidence the symbol is unused — it can also mean the callers are not resolvable by the index (plain-object property access, dynamic dispatch, cross-language calls). `impact` pairs `UNKNOWN` with a `riskNote` saying so. Confirm with a text search before treating the symbol as safe to change or delete; do not proceed on the strength of a zero.
-- When exploring unfamiliar code, use `query({search_query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `context({name: "symbolName"})`.
-- For security review, `explain({target: "fileOrSymbol"})` lists taint findings (source→sink flows; needs `analyze --pdg`).
+The serving interpreter, ComfyUI model patchers, queue, interruption and model lifetime keep their existing owners. Adapter/documentation integration does not authorize restarting ComfyUI or executing production workflows. Route model downloads through Download Manager 2 under the shared skill; preserve returned job IDs and explicit destinations.
 
-## Never Do
+Use the managed GitNexus owner via `gitnexus-use` after setup with explicit no-embedding generation. Verify this exact worktree's complete current graph and read its repository-local standard workflow skill before graph use. Use impact before nontrivial edits and exact repo/worktree detect_changes before committing, with source review for unknown/partial coverage. Do not bootstrap npx runners or edit shared index state. If the owner refuses, retain its diagnostics and continue independent work without treating missing coverage as safety evidence.
 
-- NEVER edit a function, class, or method before MCP/CLI impact analysis.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis, and never read `UNKNOWN` as an all-clear — it means the walk could not answer, which is the one verdict that requires confirming by other means.
-- NEVER rename symbols with find-and-replace — use `rename` which understands the call graph.
-- NEVER commit before MCP/CLI graph change analysis.
-
-## Resources
-
-| Resource | Use for |
-| --- | --- |
-| `gitnexus://repo/ComfyUI-FishAudioS2/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/ComfyUI-FishAudioS2/clusters` | All functional areas |
-| `gitnexus://repo/ComfyUI-FishAudioS2/processes` | All execution flows |
-| `gitnexus://repo/ComfyUI-FishAudioS2/process/{name}` | Step-by-step execution trace |
-
-## CLI
-
-| Task | Read this skill file |
-| --- | --- |
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus-cli/SKILL.md` |
-
-<!-- gitnexus:end -->
+Author operating guidance under root `skills/fishaudio-comfyui-nodes/`. After integration register only the stable canonical `skills/` root using `skills register <canonical>/skills --provenance "FishAudio ComfyUI node operating guidance"`, then `skills reconcile`, `skills doctor` and skill validation. Preserve disabled/excluded packages. Machine paths, private registry files and discovery links stay outside Git. Setup must not register temporary worktrees globally.

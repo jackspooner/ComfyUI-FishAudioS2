@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "name": "fishaudio-comfyui-nodes",
+  "units": {
+    "prerequisites": {
+      "kind": "prepare",
+      "command": [
+        "python3",
+        "tools/dev_environment.py",
+        "prerequisites"
+      ],
+      "inputs": [
+        "tools/dev_environment.py"
+      ],
+      "probe": [
+        "python3",
+        "tools/dev_environment.py",
+        "prerequisites"
+      ],
+      "environmentInputs": [
+        "FISHS2_DEV_PYTHON",
+        "COMFYUI_ROOT"
+      ],
+      "versionCommand": [
+        "python3",
+        "tools/dev_environment.py",
+        "versions"
+      ]
+    },
+    "environment": {
+      "kind": "prepare",
+      "command": [
+        "python3",
+        "tools/dev_environment.py",
+        "create"
+      ],
+      "dependsOn": [
+        "prerequisites"
+      ],
+      "inputs": [
+        "tools/dev_environment.py"
+      ],
+      "outputs": [
+        ".venv/dev-runtime/pyvenv.cfg"
+      ],
+      "probe": [
+        "python3",
+        "tools/dev_environment.py",
+        "environment-ready"
+      ],
+      "environmentInputs": [
+        "FISHS2_DEV_PYTHON",
+        "COMFYUI_ROOT"
+      ]
+    },
+    "install": {
+      "kind": "prepare",
+      "command": [
+        "python3",
+        "tools/dev_environment.py",
+        "install"
+      ],
+      "dependsOn": [
+        "environment"
+      ],
+      "inputs": [
+        "requirements.txt",
+        "requirements-dev.lock.txt",
+        "pyproject.toml",
+        "fish_speech_src/pyproject.toml",
+        "tools/dev_environment.py"
+      ],
+      "outputs": [
+        ".venv/dev-runtime/bin/pytest"
+      ],
+      "probe": [
+        "python3",
+        "tools/dev_environment.py",
+        "ready"
+      ],
+      "environmentInputs": [
+        "FISHS2_DEV_PYTHON",
+        "COMFYUI_ROOT"
+      ],
+      "timeoutMs": 1200000
+    },
+    "tests": {
+      "kind": "check",
+      "command": [
+        "python3",
+        "tools/checks.py"
+      ],
+      "dependsOn": [
+        "install"
+      ],
+      "environmentInputs": [
+        "FISHS2_DEV_PYTHON",
+        "COMFYUI_ROOT"
+      ],
+      "versionCommand": [
+        "python3",
+        "tools/dev_environment.py",
+        "test-versions"
+      ]
+    },
+    "syntax": {
+      "kind": "check",
+      "command": [
+        "python3",
+        "tools/checks.py",
+        "syntax"
+      ],
+      "dependsOn": [
+        "install"
+      ],
+      "environmentInputs": [
+        "FISHS2_DEV_PYTHON",
+        "COMFYUI_ROOT"
+      ]
+    }
+  },
+  "scopes": {
+    "full": {
+      "units": [
+        "install"
+      ]
+    },
+    "docs": {
+      "units": [
+        "install"
+      ],
+      "graph": false
+    }
+  },
+  "verification": {
+    "full": [
+      "tests",
+      "syntax"
+    ],
+    "docs": [
+      "tests",
+      "syntax"
+    ]
+  },
+  "changes": [
+    {
+      "patterns": [
+        "README.md",
+        "README_ZH.md",
+        "AGENTS.md",
+        "skills/**"
+      ],
+      "scopes": [
+        "docs"
+      ]
+    }
+  ]
+}
