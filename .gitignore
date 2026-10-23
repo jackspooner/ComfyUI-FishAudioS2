@@ -4,7 +4,6 @@ nul
 
 # Isolated development only; preserve the external serving environment.
 .venv/
-.cutlery/devtask/
 .pytest_cache/
 /.agents/
 /.claude/

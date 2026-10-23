@@ -15,9 +15,9 @@ cffi==2.1.1
 charset-normalizer==3.5.2
 click==8.3.2
 cloudpickle==3.1.2
-comfy-aimdo==0.5.5
+comfy-aimdo==0.5.6
 comfy-angle==0.1.1
-comfy-kitchen==0.2.37
+comfy-kitchen==0.2.39
 comfyui-embedded-docs==0.5.13
 comfyui-workflow-templates-core==0.3.367
 comfyui-workflow-templates-json==0.1.102

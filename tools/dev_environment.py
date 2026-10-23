@@ -44,12 +44,15 @@ from pathlib import Path
 import tomllib
 from packaging.requirements import Requirement
 
-def verify(lines):
+def verify(lines, external=False):
     for line in lines:
         line = line.strip()
         if not line or line.startswith('#'):
             continue
         requirement = Requirement(line)
+        # Browser assets do not participate in model-free custom-node tests.
+        if external and requirement.name.lower().replace('_', '-') in {'comfyui-frontend-package', 'comfyui-workflow-templates', 'comfyui-embedded-docs'}:
+            continue
         if requirement.marker is None or requirement.marker.evaluate():
             version = metadata.version(requirement.name)
             assert version in requirement.specifier, f'{requirement}: installed {version}; refresh the development lock deliberately'
@@ -57,7 +60,7 @@ def verify(lines):
 verify(Path('requirements-dev.lock.txt').read_text().splitlines())
 verify(Path('requirements.txt').read_text().splitlines())
 verify(tomllib.loads(Path('pyproject.toml').read_text())['project']['dependencies'])
-verify(Path(__import__('os').environ['COMFYUI_ROOT'], 'requirements.txt').read_text().splitlines())
+verify(Path(__import__('os').environ['COMFYUI_ROOT'], 'requirements.txt').read_text().splitlines(), external=True)
 import importlib.util
 for name in ['torch', 'torchaudio', 'torchvision', 'pytest', 'transformers', 'click', 'dac', 'audiotools']:
     module = importlib.util.find_spec(name)
